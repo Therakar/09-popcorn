@@ -50,23 +50,10 @@ const tempWatchedData = [
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
-// const KEY = "927548be";
-
 //STRUCTURAL COMPONENT
 export default function App() {
-  const [movies, setMovies] = useState([]);
-  const [watched, setWatched] = useState([]);
-
-  //how to NOT fetch data in react! (DON'T UNCOMMENT IT!)
-  // fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=interstellar`)
-  //   .then((res) => res.json())
-  //   .then((data) => setMovies(data.Search));
-  /*This way it will run an infinite number of requests. That's because, 
-  setting the state in the render logic will immediatelly cause the component to re-render 
-  itself again, however as the component is re-rendered the function is executed 
-  again which will fetch again which will 
-  set state again and this thing goes on an infinite number of times*/
-
+  const [movies, setMovies] = useState(tempMovieData);
+  const [watched, setWatched] = useState(tempWatchedData);
   return (
     <>
       <NavBar>
