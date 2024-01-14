@@ -57,8 +57,12 @@ export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  /*(1)I implemented a state variable specific for the error, 
+  so that whenever some error occured I could store the error message 
+  inside it and then display it in the UI as soon as it occures*/
 
-  const query = "interstellar";
+  const query = "sgdjahk";
 
   //How to use useEffect
 
@@ -72,16 +76,30 @@ export default function App() {
   //With async function
   useEffect(function () {
     async function fetchMovies() {
-      setIsLoading(true);
-      const res = await fetch(
-        `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-      );
-      const data = await res.json();
-      setMovies(data.Search);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+        );
+
+        /*(2)As soon as an error occures I throw a new error and I catch the error inside the catch block*/
+        if (!res.ok)
+          throw new Error("Something went wrong with fetching movies");
+
+        const data = await res.json();
+        if (data.Response === "False") throw new Error("movie not fount");
+        setMovies(data.Search);
+      } catch (err) {
+        console.error(err.message);
+        setError(err.message); /*(3) I set the error state to the message of
+        the error I specified ("Something went wrong with
+        fetching movies" or "movie not fount" in this case)*/
+      } finally {
+        setIsLoading(false);
+      }
     }
     fetchMovies();
-    console.log(movies);
+    // console.log(movies);
   }, []);
 
   //how to NOT fetch data in react! (DON'T UNCOMMENT IT!)
@@ -124,7 +142,18 @@ export default function App() {
 
         */}
 
-        <Box>{isLoading ? <Loader /> : <MovieList movies={movies} />}</Box>
+        <Box>
+          {/*isLoading ? <Loader /> : <MovieList movies={movies} />*/}
+          {/*(4) I used the error state variable in order to render 
+          something on the screen conditionally*/}
+          {/* These 3 situations are mutually exclusive: */}
+          {/* Is loading */}
+          {isLoading && <Loader />}
+          {/* Is NOT loading AND there is NO error*/}
+          {isLoading && !error && <MovieList movies={movies} />}{" "}
+          {/* There IS an error*/}
+          {error && <ErrorMessage message={error} />}
+        </Box>
         <Box>
           <WatchedSummary watched={watched} />
           <WatchedMoviesList watched={watched} />
@@ -136,6 +165,14 @@ export default function App() {
 
 function Loader() {
   return <p className="loader">Loading...</p>;
+}
+
+function ErrorMessage({ message }) {
+  return (
+    <p className="error">
+      <span>⛔</span> {message}
+    </p>
+  );
 }
 
 //STRUCTURAL COMPONENT
