@@ -62,7 +62,7 @@ export default function App() {
   so that whenever some error occured I could store the error message 
   inside it and then display it in the UI as soon as it occures*/
 
-  const query = "sgdjahk";
+  const query = "interstellar";
 
   //How to use useEffect
 
@@ -150,7 +150,7 @@ export default function App() {
           {/* Is loading */}
           {isLoading && <Loader />}
           {/* Is NOT loading AND there is NO error*/}
-          {isLoading && !error && <MovieList movies={movies} />}{" "}
+          {!isLoading && !error && <MovieList movies={movies} />}{" "}
           {/* There IS an error*/}
           {error && <ErrorMessage message={error} />}
         </Box>
