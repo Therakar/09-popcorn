@@ -58,12 +58,21 @@ export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
   const [error, setError] = useState("");
   /*(1)I implemented a state variable specific for the error, 
   so that whenever some error occured I could store the error message 
   inside it and then display it in the UI as soon as it occures*/
 
-  const tempQuery = "interstellar";
+  // const tempQuery = "interstellar";
+
+  function handleSelectMovie(id) {
+    setSelectedId((selectedId) => (id === selectedId ? null : id));
+  }
+
+  function handleCloseMovie() {
+    setSelectedId(null);
+  }
 
   //How to use useEffect
 
@@ -92,6 +101,7 @@ export default function App() {
           const data = await res.json();
           if (data.Response === "False") throw new Error("movie not found");
           setMovies(data.Search);
+          console.log(data.Search);
         } catch (err) {
           console.error(err.message);
           setError(err.message); /*(3) I set the error state to the message of
@@ -161,13 +171,26 @@ export default function App() {
           {/* Is loading */}
           {isLoading && <Loader />}
           {/* Is NOT loading AND there is NO error*/}
-          {!isLoading && !error && <MovieList movies={movies} />}{" "}
+          {!isLoading && !error && (
+            <MovieList movies={movies} onSelectMovie={handleSelectMovie} />
+          )}{" "}
           {/* There IS an error*/}
           {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedMoviesList watched={watched} />
+          {selectedId ? (
+            <MovieDetails
+              selectedId={selectedId}
+              onCloseMovie={handleCloseMovie}
+            />
+          ) : (
+            /*Here I need a fragment because I have a 
+            piece of JSX which has basically two root elements*/
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedMoviesList watched={watched} />
+            </>
+          )}
         </Box>
       </Main>
     </>
@@ -248,20 +271,20 @@ function Box({ children }) {
 }
 
 //STATEFULL COMPONENT
-function MovieList({ movies }) {
+function MovieList({ movies, onSelectMovie, onCloseMovie }) {
   return (
-    <ul className="list">
+    <ul className="list list-movies">
       {movies?.map((movie) => (
-        <Movie movie={movie} />
+        <Movie key={movie.imdbID} movie={movie} onSelectMovie={onSelectMovie} />
       ))}
     </ul>
   );
 }
 
 //STATELESS/PRESENTATIONAL COPONENT
-function Movie({ movie }) {
+function Movie({ movie, onSelectMovie }) {
   return (
-    <li key={movie.imdbID}>
+    <li onClick={() => onSelectMovie(movie.imdbID)}>
       <img src={movie.Poster} alt={`${movie.Title} poster`} />
       <h3>{movie.Title}</h3>
       <div>
@@ -297,6 +320,17 @@ function Movie({ movie }) {
 //     </div>
 //   );
 // }
+
+function MovieDetails({ selectedId, onCloseMovie }) {
+  return (
+    <div className="details">
+      <button className="btn-back" onClick={onCloseMovie}>
+        &larr;
+      </button>
+      {selectedId}
+    </div>
+  );
+}
 
 //STATELESS/PRESENTATIONAL COPONENT
 function WatchedSummary({ watched }) {
