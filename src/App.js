@@ -54,6 +54,7 @@ const KEY = "927548be";
 
 //STRUCTURAL COMPONENT
 export default function App() {
+  const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +63,7 @@ export default function App() {
   so that whenever some error occured I could store the error message 
   inside it and then display it in the UI as soon as it occures*/
 
-  const query = "interstellar";
+  const tempQuery = "interstellar";
 
   //How to use useEffect
 
@@ -74,33 +75,43 @@ export default function App() {
   // }, []);
 
   //With async function
-  useEffect(function () {
-    async function fetchMovies() {
-      try {
-        setIsLoading(true);
-        const res = await fetch(
-          `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-        );
+  useEffect(
+    function () {
+      async function fetchMovies() {
+        try {
+          setIsLoading(true);
+          setError("");
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+          );
 
-        /*(2)As soon as an error occures I throw a new error and I catch the error inside the catch block*/
-        if (!res.ok)
-          throw new Error("Something went wrong with fetching movies");
+          /*(2)As soon as an error occures I throw a new error and I catch the error inside the catch block*/
+          if (!res.ok)
+            throw new Error("Something went wrong with fetching movies");
 
-        const data = await res.json();
-        if (data.Response === "False") throw new Error("movie not fount");
-        setMovies(data.Search);
-      } catch (err) {
-        console.error(err.message);
-        setError(err.message); /*(3) I set the error state to the message of
+          const data = await res.json();
+          if (data.Response === "False") throw new Error("movie not found");
+          setMovies(data.Search);
+        } catch (err) {
+          console.error(err.message);
+          setError(err.message); /*(3) I set the error state to the message of
         the error I specified ("Something went wrong with
         fetching movies" or "movie not fount" in this case)*/
-      } finally {
-        setIsLoading(false);
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-    fetchMovies();
-    // console.log(movies);
-  }, []);
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+
+      fetchMovies();
+      // console.log(movies);
+    },
+    [query]
+  );
 
   //how to NOT fetch data in react! (DON'T UNCOMMENT IT!)
   // fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=interstellar`)
@@ -115,7 +126,7 @@ export default function App() {
   return (
     <>
       <NavBar>
-        <Search />
+        <Search query={query} setQuery={setQuery} />
         <NumResults movies={movies} />
       </NavBar>
       <Main>
@@ -196,9 +207,7 @@ function Logo() {
 }
 
 //STATEFULL COMPONENT
-function Search() {
-  const [query, setQuery] = useState("");
-
+function Search({ query, setQuery }) {
   return (
     <input
       className="search"
