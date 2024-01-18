@@ -402,6 +402,20 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     [selectedId]
   );
 
+  //Effect to change title
+  useEffect(
+    function () {
+      if (!title) return;
+      document.title = `Movie | ${title}`;
+
+      //Cleanup function
+      return function () {
+        document.title = "usePopcorn";
+      };
+    },
+    [title]
+  );
+
   return (
     <div className="details">
       {isLoading && <Loader />}
