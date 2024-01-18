@@ -95,12 +95,16 @@ export default function App() {
   //With async function
   useEffect(
     function () {
+      //abort controller
+      const controller = new AbortController();
+
       async function fetchMovies() {
         try {
           setIsLoading(true);
           setError("");
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+            { signal: controller.signal }
           );
 
           /*(2)As soon as an error occures I throw a new error and I catch the error inside the catch block*/
@@ -110,12 +114,16 @@ export default function App() {
           const data = await res.json();
           if (data.Response === "False") throw new Error("movie not found");
           setMovies(data.Search);
+          setError("");
           // console.log(data.Search);
         } catch (err) {
           console.error(err.message);
-          setError(err.message); /*(3) I set the error state to the message of
+
+          if (err.name !== "AbortError") {
+            setError(err.message); /*(3) I set the error state to the message of
         the error I specified ("Something went wrong with
         fetching movies" or "movie not fount" in this case)*/
+          }
         } finally {
           setIsLoading(false);
         }
@@ -127,7 +135,10 @@ export default function App() {
       }
 
       fetchMovies();
-      // console.log(movies);
+
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   );
