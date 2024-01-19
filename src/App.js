@@ -84,7 +84,6 @@ export default function App() {
   }
 
   //How to use useEffect
-
   //Normal
   // useEffect(function () {
   //   fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=interstellar`)
@@ -134,6 +133,7 @@ export default function App() {
         return;
       }
 
+      handleCloseMovie();
       fetchMovies();
 
       return function () {
@@ -356,7 +356,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const watchedUserRating = watched.find(
     (movie) => movie.imdbID === selectedId
   )?.userRating;
-  console.log(isWatched);
+  // console.log(isWatched);
   const {
     Title: title,
     Year: year,
@@ -383,6 +383,24 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     onAddWatched(newWatchedMovie);
     onCloseMovie();
   }
+
+  //Listening to keypress
+  useEffect(
+    function () {
+      function callback(e) {
+        if (e.code === "Escape") {
+          onCloseMovie();
+          // console.log("CLOSE");
+        }
+      }
+      document.addEventListener("keydown", callback);
+      //cleanup function
+      return function () {
+        document.removeEventListener("keydown", callback);
+      };
+    },
+    [onCloseMovie]
+  );
 
   // console.log(title, year);
   useEffect(
@@ -422,6 +440,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       //Cleanup function
       return function () {
         document.title = "usePopcorn";
+        // console.log(`Clean up effect for movie ${title}`);
       };
     },
     [title]
