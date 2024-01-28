@@ -1,6 +1,53 @@
 import { useEffect, useState } from "react";
 import StarRating from "./StarRating";
 
+const tempMovieData = [
+  {
+    imdbID: "tt1375666",
+    Title: "Inception",
+    Year: "2010",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
+  },
+  {
+    imdbID: "tt0133093",
+    Title: "The Matrix",
+    Year: "1999",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+  },
+  {
+    imdbID: "tt6751668",
+    Title: "Parasite",
+    Year: "2019",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
+  },
+];
+
+const tempWatchedData = [
+  {
+    imdbID: "tt1375666",
+    Title: "Inception",
+    Year: "2010",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_SX300.jpg",
+    runtime: 148,
+    imdbRating: 8.8,
+    userRating: 10,
+  },
+  {
+    imdbID: "tt0088763",
+    Title: "Back to the Future",
+    Year: "1985",
+    Poster:
+      "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+    runtime: 116,
+    imdbRating: 8.5,
+    userRating: 9,
+  },
+];
+
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
@@ -10,29 +57,13 @@ const KEY = "927548be";
 export default function App() {
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState([]);
-  // const [watched, setWatched] = useState([]);
+  const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [error, setError] =
-    useState(""); /*(1)I implemented a state variable specific for the error, 
+  const [error, setError] = useState("");
+  /*(1)I implemented a state variable specific for the error, 
   so that whenever some error occured I could store the error message 
   inside it and then display it in the UI as soon as it occures*/
-
-  //This way I take the data from local storage and reuse it
-  /* Instead of passing here a value inside useState I'm passing a callback function 
-  (the useState hook also accepts a callback function instead of just a single value),
-  I can then initialize the state with wahtever value this callback function will return.
-  WARNING!! It needs to bee a pure function and it CANNOT receive any value. */
-  const [watched, setWatched] = useState(function () {
-    /*Here I read from localStorage using the getItem() 
-    method with the key I used before to store the data in local storage*/ const storedValue =
-      localStorage.getItem(
-        "watched"
-      ); /* Finally I return the storedValue, of course if I just do this "return storedValue;", 
-      it's not gonna work because I previously stored the data as a string by using JSON.stringify(),
-      so now I need to  convert it back using JSON.parse() */
-    return JSON.parse(storedValue);
-  });
 
   // const tempQuery = "interstellar";
 
@@ -46,36 +77,19 @@ export default function App() {
 
   function handleAddWatched(movie) {
     setWatched((watched) => [...watched, movie]);
-
-    /* Local Storage inside an event handler ->  localStorage is a function available 
-    in all browsers, then I pass the function setItem, then I pass in the name 
-    of the key (so basically the name of the data I want to store, "watched" in this case)
-    and the actual data */
-    // localStorage.setItem(
-    //   "watched",
-    //   JSON.stringify([...watched, movie])
-    // );
-    /* Here I can't use the watched array simply like this: ...('watched', watched);
-    Because it has just been updated in setWatched((watched)=> [...watched, movie]); and this happens asynchronusly,
-    so the watched array is still the old version, before the new movie has been added.
-    I need to build a new array based on the old one +  the new movie: [...watched, movie] and then I have 
-    to convert everything into a string using the built in JSON.stringify() */
   }
 
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  useEffect(
-    function () {
-      localStorage.setItem(
-        "watched",
-        JSON.stringify(watched)
-      ); /* Here I don't need to create a new array because the
-       effect will run only after the movies have already been updated */
-    },
-    [watched]
-  );
+  //How to use useEffect
+  //Normal
+  // useEffect(function () {
+  //   fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=interstellar`)
+  //     .then((res) => res.json())
+  //     .then((data) => setMovies(data.Search));
+  // }, []);
 
   //With async function
   useEffect(
@@ -87,7 +101,6 @@ export default function App() {
         try {
           setIsLoading(true);
           setError("");
-
           const res = await fetch(
             `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
             { signal: controller.signal }
@@ -99,13 +112,13 @@ export default function App() {
 
           const data = await res.json();
           if (data.Response === "False") throw new Error("movie not found");
-
           setMovies(data.Search);
           setError("");
           // console.log(data.Search);
         } catch (err) {
+          console.error(err.message);
+
           if (err.name !== "AbortError") {
-            console.log(err.message);
             setError(err.message); /*(3) I set the error state to the message of
         the error I specified ("Something went wrong with
         fetching movies" or "movie not fount" in this case)*/
@@ -130,6 +143,16 @@ export default function App() {
     [query]
   );
 
+  //how to NOT fetch data in react! (DON'T UNCOMMENT IT!)
+  // fetch(`http://www.omdbapi.com/?apikey=${KEY}&s=interstellar`)
+  //   .then((res) => res.json())
+  //   .then((data) => setMovies(data.Search));
+  /*This way it will run an infinite number of requests. That's because, 
+  setting the state in the render logic will immediatelly cause the component to re-render 
+  itself again, however as the component is re-rendered the function is executed 
+  again which will fetch again which will 
+  set state again and this thing goes on an infinite number of times*/
+
   return (
     <>
       <NavBar>
@@ -137,6 +160,29 @@ export default function App() {
         <NumResults movies={movies} />
       </NavBar>
       <Main>
+        {/* 
+
+        ALTERNATIVE TO children prop
+
+        <Box element={<MovieList movies={movies} />} />   
+
+        Here I'm passing MovieList into the Box component as an expilicit prop (a prop called 'element' in this case) 
+
+        Another example: 
+
+        <Box
+          element={
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedMoviesList watched={watched} />
+            </>
+          }
+        />
+
+        In this case I'm passing a brand new piece of JSX so I need a fragment (<> </>)
+
+        */}
+
         <Box>
           {/*isLoading ? <Loader /> : <MovieList movies={movies} />*/}
           {/*(4) I used the error state variable in order to render 
@@ -277,6 +323,29 @@ function Movie({ movie, onSelectMovie }) {
 }
 
 //STATEFULL COMPONENT
+// function WatchedBox() {
+//   const [watched, setWatched] = useState(tempWatchedData);
+//   const [isOpen2, setIsOpen2] = useState(true);
+
+//   return (
+//     <div className="box">
+//       <button
+//         className="btn-toggle"
+//         onClick={() => setIsOpen2((open) => !open)}
+//       >
+//         {isOpen2 ? "–" : "+"}
+//       </button>
+//       {isOpen2 && (
+//         <>
+//           <WatchedSummary watched={watched} />
+
+//           <WatchedMoviesList watched={watched} />
+//         </>
+//       )}
+//     </div>
+//   );
+// }
+
 function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const [movie, setMovie] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -301,21 +370,6 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     Genre: genre,
   } = movie;
 
-  // const [isTop, setIsTop] = useState(imdbRating > 8);
-  // console.log(isTop);
-
-  // useEffect(
-  //   function () {
-  //     setIsTop(imdbRating > 8);
-  //   },
-  //   [imdbRating]
-  // );
-
-  // const isTop = imdbRating > 8;
-  // console.log(isTop);
-
-  // const [avgRating, setAvgRating] = useState(0);
-
   function handleAdd() {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -328,13 +382,6 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     };
     onAddWatched(newWatchedMovie);
     onCloseMovie();
-
-    // setAvgRating(Number(imdbRating));
-    // setAvgRating(
-    //   (avgRating) => (avgRating + userRating) / 2
-    // );
-    /*here I have to use a callback function (avgRating)=>  
-    because in this way I can acces to the updated state */
   }
 
   //Listening to keypress
@@ -421,8 +468,6 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
               </p>
             </div>
           </header>
-
-          {/* <p>{avgRating}</p> */}
 
           <section>
             <div className="rating">
