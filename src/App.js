@@ -321,7 +321,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     function () {
       //It happens only if there already is an userRating
       if (userRating) {
-        countRef.current = countRef.current + 1;
+        countRef.current++;
       }
     },
     [userRating]
