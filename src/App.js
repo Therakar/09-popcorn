@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating";
 
 const average = (arr) =>
@@ -210,6 +210,37 @@ function Logo() {
 
 //STATEFULL COMPONENT
 function Search({ query, setQuery }) {
+  //WRONG WAY OF SELECT A DOM ELEMENT
+  // useEffect(function () {
+  //   const el = document.querySelector(".search");
+  //   console.log(el);
+  //   el.focus();
+  // }, []);
+
+  //Selecting a DOM element using REFS (right way)
+  const inputElement = useRef(null);
+
+  useEffect(
+    function () {
+      function callback(e) {
+        //if the search bar is already focused return
+        if (document.activeElement === inputElement.current) return;
+
+        //focus only if I press Enter and clean the query
+        if (e.code === "Enter") {
+          inputElement.current.focus();
+          setQuery("");
+        }
+      }
+
+      //This adds the event listener
+      document.addEventListener("keydown", callback);
+
+      return () => document.addEventListener("keydown", callback);
+    },
+    [setQuery]
+  );
+
   return (
     <input
       className="search"
@@ -217,6 +248,7 @@ function Search({ query, setQuery }) {
       placeholder="Search movies..."
       value={query}
       onChange={(e) => setQuery(e.target.value)}
+      ref={inputElement}
     />
   );
 }
