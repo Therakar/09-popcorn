@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating";
-import { useMovies } from "./useMovies";
 
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -10,14 +9,32 @@ const KEY = "927548be";
 //STRUCTURAL COMPONENT
 export default function App() {
   const [query, setQuery] = useState("");
+  const [movies, setMovies] = useState([]);
+  // const [watched, setWatched] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [error, setError] =
+    useState(""); /*(1)I implemented a state variable specific for the error, 
+  so that whenever some error occured I could store the error message 
+  inside it and then display it in the UI as soon as it occures*/
+
+  //This way I take the data from local storage and reuse it
+  /* Instead of passing here a value inside useState I'm passing a callback function 
+  (the useState hook also accepts a callback function instead of just a single value),
+  I can then initialize the state with wahtever value this callback function will return.
+  WARNING!! It needs to bee a pure function and it CANNOT receive any value. */
   const [watched, setWatched] = useState(function () {
-    const storedValue = localStorage.getItem("watched");
+    /*Here I read from localStorage using the getItem() 
+    method with the key I used before to store the data in local storage*/ const storedValue =
+      localStorage.getItem(
+        "watched"
+      ); /* Finally I return the storedValue, of course if I just do this "return storedValue;", 
+      it's not gonna work because I previously stored the data as a string by using JSON.stringify(),
+      so now I need to  convert it back using JSON.parse() */
     return JSON.parse(storedValue);
   });
-  /* Here I get the pieces of data that is returned and distructure
-  them into their own variables again */
-  const { movies, isLoading, error } = useMovies(query);
+
+  // const tempQuery = "interstellar";
 
   function handleSelectMovie(id) {
     setSelectedId((selectedId) => (id === selectedId ? null : id));
@@ -29,6 +46,20 @@ export default function App() {
 
   function handleAddWatched(movie) {
     setWatched((watched) => [...watched, movie]);
+
+    /* Local Storage inside an event handler ->  localStorage is a function available 
+    in all browsers, then I pass the function setItem, then I pass in the name 
+    of the key (so basically the name of the data I want to store, "watched" in this case)
+    and the actual data */
+    // localStorage.setItem(
+    //   "watched",
+    //   JSON.stringify([...watched, movie])
+    // );
+    /* Here I can't use the watched array simply like this: ...('watched', watched);
+    Because it has just been updated in setWatched((watched)=> [...watched, movie]); and this happens asynchronusly,
+    so the watched array is still the old version, before the new movie has been added.
+    I need to build a new array based on the old one +  the new movie: [...watched, movie] and then I have 
+    to convert everything into a string using the built in JSON.stringify() */
   }
 
   function handleDeleteWatched(id) {
@@ -37,9 +68,66 @@ export default function App() {
 
   useEffect(
     function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
+      localStorage.setItem(
+        "watched",
+        JSON.stringify(watched)
+      ); /* Here I don't need to create a new array because the
+       effect will run only after the movies have already been updated */
     },
     [watched]
+  );
+
+  //With async function
+  useEffect(
+    function () {
+      //abort controller
+      const controller = new AbortController();
+
+      async function fetchMovies() {
+        try {
+          setIsLoading(true);
+          setError("");
+
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+            { signal: controller.signal }
+          );
+
+          /*(2)As soon as an error occures I throw a new error and I catch the error inside the catch block*/
+          if (!res.ok)
+            throw new Error("Something went wrong with fetching movies");
+
+          const data = await res.json();
+          if (data.Response === "False") throw new Error("movie not found");
+
+          setMovies(data.Search);
+          setError("");
+          // console.log(data.Search);
+        } catch (err) {
+          if (err.name !== "AbortError") {
+            console.log(err.message);
+            setError(err.message); /*(3) I set the error state to the message of
+        the error I specified ("Something went wrong with
+        fetching movies" or "movie not fount" in this case)*/
+          }
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      if (query.length < 3) {
+        setMovies([]);
+        setError("");
+        return;
+      }
+
+      handleCloseMovie();
+      fetchMovies();
+
+      return function () {
+        controller.abort();
+      };
+    },
+    [query]
   );
 
   return (
@@ -50,10 +138,17 @@ export default function App() {
       </NavBar>
       <Main>
         <Box>
+          {/*isLoading ? <Loader /> : <MovieList movies={movies} />*/}
+          {/*(4) I used the error state variable in order to render 
+          something on the screen conditionally*/}
+          {/* These 3 situations are mutually exclusive: */}
+          {/* Is loading */}
           {isLoading && <Loader />}
+          {/* Is NOT loading AND there is NO error*/}
           {!isLoading && !error && (
             <MovieList movies={movies} onSelectMovie={handleSelectMovie} />
           )}{" "}
+          {/* There IS an error*/}
           {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
@@ -65,6 +160,8 @@ export default function App() {
               watched={watched}
             />
           ) : (
+            /*Here I need a fragment because I have a 
+            piece of JSX which has basically two root elements*/
             <>
               <WatchedSummary watched={watched} />
               <WatchedMoviesList
@@ -113,6 +210,14 @@ function Logo() {
 
 //STATEFULL COMPONENT
 function Search({ query, setQuery }) {
+  //WRONG WAY OF SELECT A DOM ELEMENT
+  // useEffect(function () {
+  //   const el = document.querySelector(".search");
+  //   console.log(el);
+  //   el.focus();
+  // }, []);
+
+  //Selecting a DOM element using REFS (right way)
   const inputElement = useRef(null);
 
   useEffect(
@@ -240,6 +345,21 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     Genre: genre,
   } = movie;
 
+  // const [isTop, setIsTop] = useState(imdbRating > 8);
+  // console.log(isTop);
+
+  // useEffect(
+  //   function () {
+  //     setIsTop(imdbRating > 8);
+  //   },
+  //   [imdbRating]
+  // );
+
+  // const isTop = imdbRating > 8;
+  // console.log(isTop);
+
+  // const [avgRating, setAvgRating] = useState(0);
+
   function handleAdd() {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -253,6 +373,13 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     };
     onAddWatched(newWatchedMovie);
     onCloseMovie();
+
+    // setAvgRating(Number(imdbRating));
+    // setAvgRating(
+    //   (avgRating) => (avgRating + userRating) / 2
+    // );
+    /*here I have to use a callback function (avgRating)=>  
+    because in this way I can acces to the updated state */
   }
 
   //Listening to keypress
@@ -261,6 +388,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       function callback(e) {
         if (e.code === "Escape") {
           onCloseMovie();
+          // console.log("CLOSE");
         }
       }
       document.addEventListener("keydown", callback);
@@ -310,6 +438,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       //Cleanup function
       return function () {
         document.title = "usePopcorn";
+        // console.log(`Clean up effect for movie ${title}`);
       };
     },
     [title]
